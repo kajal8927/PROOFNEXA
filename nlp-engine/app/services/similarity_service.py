@@ -1,9 +1,13 @@
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from app.services.preprocessing_service import tokenize_text, split_into_sentences
 from app.services.ngram_service import generate_ngrams
 from app.services.fingerprint_service import generate_fingerprints
-
+from app.utils.logging import logger
 
 def calculate_jaccard_similarity(set_a: set, set_b: set) -> float:
+    """Calculates Jaccard similarity between two sets."""
     if not set_a or not set_b:
         return 0.0
 
@@ -12,74 +16,75 @@ def calculate_jaccard_similarity(set_a: set, set_b: set) -> float:
 
     return round((len(intersection) / len(union)) * 100, 2)
 
-
-def calculate_levenshtein_distance(str1: str, str2: str) -> float:
-    """
-    Calculates the Levenshtein distance between two strings 
-    and returns a similarity percentage.
-    """
-    if not str1 or not str2:
+def calculate_cosine_similarity(text1: str, text2: str) -> float:
+    """Calculates TF-IDF Cosine Similarity between two texts."""
+    try:
+        if not text1.strip() or not text2.strip():
+            return 0.0
+            
+        vectorizer = TfidfVectorizer(tokenizer=tokenize_text, token_pattern=None, lowercase=True)
+        tfidf = vectorizer.fit_transform([text1, text2])
+        
+        sim = cosine_similarity(tfidf[0:1], tfidf[1:2])
+        return round(float(sim[0][0]) * 100, 2)
+    except Exception as e:
+        logger.error(f"Error calculating cosine similarity: {str(e)}")
         return 0.0
-    
-    m, n = len(str1), len(str2)
-    dp = [[0] * (n + 1) for _ in range(m + 1)]
 
-    for i in range(m + 1):
-        dp[i][0] = i
-    for j in range(n + 1):
-        dp[0][j] = j
-
-    for i in range(1, m + 1):
-        for j in range(1, n + 1):
-            if str1[i-1] == str2[j-1]:
-                dp[i][j] = dp[i-1][j-1]
-            else:
-                dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])
-
-    max_len = max(m, n)
-    distance = dp[m][n]
-    
-    similarity = ((max_len - distance) / max_len) * 100
-    return round(similarity, 2)
-
-
-def get_text_fingerprints(text: str) -> set:
+def get_text_fingerprints(text: str, n: int = 3) -> set:
+    """Generates fingerprints for a given text."""
     tokens = tokenize_text(text)
-    ngrams = generate_ngrams(tokens, 3)
-    fingerprints = generate_fingerprints(ngrams)
+    ngrams = generate_ngrams(tokens, n)
+    return generate_fingerprints(ngrams)
 
-    return fingerprints
+def determine_risk_level(score: float) -> str:
+    """
+    Determines risk level based on similarity score.
+    0–30 Low, 31–60 Medium, 61–80 High, 81–100 Critical
+    """
+    if score <= 30:
+        return "Low"
+    elif score <= 60:
+        return "Medium"
+    elif score <= 80:
+        return "High"
+    else:
+        return "Critical"
 
+def calculate_overall_similarity(text1: str, text2: str) -> float:
+    """Combines fingerprint overlap and Cosine similarity for a robust score."""
+    fp1 = get_text_fingerprints(text1)
+    fp2 = get_text_fingerprints(text2)
+    
+    jaccard_score = calculate_jaccard_similarity(fp1, fp2)
+    cosine_score = calculate_cosine_similarity(text1, text2)
+    
+    # Weighted average: Fingerprints (60%), TF-IDF Cosine (40%)
+    # This gives weight to exact phrase matches while capturing semantic similarity
+    final_score = (jaccard_score * 0.6) + (cosine_score * 0.4)
+    return round(final_score, 2)
 
-def find_matching_sentences(input_text: str, source_text: str) -> list:
+def find_matching_sentences(input_text: str, source_text: str, threshold: float = 30.0) -> list:
+    """Finds matching sentences between input and source text."""
     input_sentences = split_into_sentences(input_text)
     source_sentences = split_into_sentences(source_text)
 
     matches = []
 
     for input_sentence in input_sentences:
-        input_fp = get_text_fingerprints(input_sentence)
-
+        input_fp = get_text_fingerprints(input_sentence, n=2) # Smaller n-gram for sentences
+        
         for source_sentence in source_sentences:
-            source_fp = get_text_fingerprints(source_sentence)
-
-            # 1. Check Jaccard (Fast)
+            source_fp = get_text_fingerprints(source_sentence, n=2)
+            
             jaccard_score = calculate_jaccard_similarity(input_fp, source_fp)
-
-            # 2. Check Levenshtein (Accurate for paraphrasing)
-            levenshtein_score = calculate_levenshtein_distance(
-                input_sentence.lower(), 
-                source_sentence.lower()
-            )
-
-            # Use maximum of both scores for final match
-            final_score = max(jaccard_score, levenshtein_score)
-
-            if final_score >= 40:  # Threshold reduced slightly for better recall
+            
+            if jaccard_score >= threshold:
                 matches.append({
-                    "matchedText": input_sentence,
-                    "sourceText": source_sentence,
-                    "similarity": final_score
+                    "matchedText": source_sentence,
+                    "inputText": input_sentence,
+                    "similarity": jaccard_score,
+                    "matchType": "ngram"
                 })
-
+                
     return matches

@@ -1,13 +1,15 @@
-import os
 from pymongo import MongoClient
-from dotenv import load_dotenv
+from app.config.config import settings
 
-load_dotenv()
+# Initialize MongoDB Client
+client = MongoClient(settings.MONGO_URI)
+db = client[settings.DATABASE_NAME]
+submissions_collection = db[settings.COLLECTION_NAME]
 
-MONGO_URI = os.getenv("MONGO_URI")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "proofnexa")
-
-client = MongoClient(MONGO_URI)
-db = client[DATABASE_NAME]
-
-submissions_collection = db["submissions"]
+def get_db_status():
+    try:
+        # The ismaster command is cheap and does not require auth.
+        client.admin.command('ismaster')
+        return True
+    except Exception:
+        return False
