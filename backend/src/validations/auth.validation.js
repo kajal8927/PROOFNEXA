@@ -13,9 +13,12 @@ const validateSignup = ({ name, email, password }) => {
     return "Please provide a valid email address";
   }
 
-  if (password.length < 8) {
-    return "Password must be at least 8 characters";
-  }
+ const strongPassword =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+if (!strongPassword.test(password)) {
+  return "Password must include uppercase, lowercase, number and special character";
+}
 
   return null;
 };

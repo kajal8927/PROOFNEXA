@@ -10,6 +10,7 @@ const hpp = require("hpp");
 
 const authRoutes = require("./routes/auth.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
+const uploadRoutes = require("./routes/upload.routes");
 const {
   generalLimiter,
   authLimiter
@@ -46,6 +47,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.use(errorMiddleware);
 
@@ -60,5 +62,7 @@ app.use((err, req, res, next) => {
         : err.message
   });
 });
+
+
 
 module.exports = app;
