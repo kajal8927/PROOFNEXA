@@ -10,6 +10,8 @@ const hpp = require("hpp");
 
 const authRoutes = require("./routes/auth.routes");
 const errorMiddleware = require("./middlewares/error.middleware");
+const analyzeRoutes = require("./routes/analyze.routes");
+const historyRoutes = require("./routes/history.routes");
 const uploadRoutes = require("./routes/upload.routes");
 const {
   generalLimiter,
@@ -48,6 +50,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/analyze", analyzeRoutes);
+app.use("/api/history", historyRoutes);
 
 app.use(errorMiddleware);
 

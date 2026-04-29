@@ -1,5 +1,26 @@
 const mongoose = require("mongoose");
 
+const matchSchema = new mongoose.Schema(
+  {
+    text: {
+      type: String,
+      trim: true
+    },
+    source: {
+      type: String,
+      trim: true,
+      default: "Unknown"
+    },
+    percentage: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+    }
+  },
+  { _id: false }
+);
+
 const submissionSchema = new mongoose.Schema(
   {
     userId: {
@@ -32,7 +53,8 @@ const submissionSchema = new mongoose.Schema(
 
     originalText: {
       type: String,
-      required: true
+      required: true,
+      select: false
     },
 
     textLength: {
@@ -42,21 +64,29 @@ const submissionSchema = new mongoose.Schema(
 
     similarityScore: {
       type: Number,
+      min: 0,
+      max: 100,
       default: 0
     },
 
-    matches: [
-      {
-        text: String,
-        source: String,
-        percentage: Number
-      }
-    ],
+    matches: {
+      type: [matchSchema],
+      default: []
+    },
 
     status: {
       type: String,
       enum: ["uploaded", "processing", "completed", "failed"],
-      default: "uploaded"
+      default: "uploaded",
+      index: true
+    },
+
+    analyzedAt: {
+      type: Date
+    },
+
+    errorMessage: {
+      type: String
     }
   },
   {
@@ -65,5 +95,6 @@ const submissionSchema = new mongoose.Schema(
 );
 
 submissionSchema.index({ userId: 1, createdAt: -1 });
+submissionSchema.index({ userId: 1, status: 1 });
 
 module.exports = mongoose.model("Submission", submissionSchema);
