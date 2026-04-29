@@ -6,10 +6,12 @@ import NotFound from '../pages/NotFound';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Dashboard from '../pages/Dashboard';
 import ProtectedRoute from './ProtectedRoute';
+import Reports from "../pages/Reports";
+
+
 
 // Placeholder Pages
 import Scan from '../pages/Scan';
-import Reports from '../pages/Reports';
 import History from '../pages/History';
 import Settings from '../pages/Settings';
 
@@ -18,6 +20,8 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/reports" element={<Reports />} />
+
       
       {/* Protected Dashboard Routes */}
       <Route element={<ProtectedRoute />}>

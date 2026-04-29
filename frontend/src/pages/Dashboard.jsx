@@ -1,89 +1,117 @@
-import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Search, Percent, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import StatCard from '../components/dashboard/StatCard';
-import ScanActivityChart from '../components/dashboard/ScanActivityChart';
-import RecentScans from '../components/dashboard/RecentScans';
-import { getDashboardStats, getScanActivity, getRecentScans } from '../services/dashboardService';
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Search,
+  FileText,
+  Percent,
+  FileCheck,
+  CheckCircle,
+  RefreshCw,
+} from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-const iconMap = {
-  search: Search,
-  percent: Percent,
-  file: FileText,
-  check: CheckCircle
+import {
+  getDashboardStats,
+  getScanActivity,
+  getRecentScans,
+} from "../services/dashboardService";
+
+const getScoreClass = (score) => {
+  if (score <= 15) return "bg-green-100 text-green-700";
+  if (score <= 25) return "bg-orange-100 text-orange-700";
+  return "bg-red-100 text-red-700";
 };
 
-const Dashboard = () => {
-  const { searchQuery } = useOutletContext();
-  const [userName, setUserName] = useState('User');
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  const [stats, setStats] = useState([]);
-  const [chartData, setChartData] = useState([]);
-  const [chartPeriod, setChartPeriod] = useState('This Week');
-  const [recentScans, setRecentScans] = useState([]);
+const StatCard = ({ title, value, change, icon: Icon }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-slate-500">{title}</p>
+          <h3 className="mt-2 text-2xl font-bold text-slate-900">{value}</h3>
+        </div>
 
-  useEffect(() => {
-    const name = localStorage.getItem('proofnexa_user');
-    if (name) {
-      setUserName(name);
-    }
-  }, []);
+        <div className="rounded-xl bg-purple-100 p-3 text-purple-600">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+
+      {change && (
+        <p className="mt-4 text-sm text-slate-500">
+          <span className="rounded-full bg-green-100 px-2 py-1 text-green-700">
+            {change}
+          </span>{" "}
+          from last week
+        </p>
+      )}
+    </motion.div>
+  );
+};
+
+export default function Dashboard() {
+  const [stats, setStats] = useState(null);
+  const [activity, setActivity] = useState([]);
+  const [recentScans, setRecentScans] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const userName = localStorage.getItem("proofnexa_user") || "User";
 
   const fetchDashboardData = async () => {
-    setIsLoading(true);
-    setError(null);
     try {
-      const [statsRes, chartRes, scansRes] = await Promise.all([
+      setLoading(true);
+      setError("");
+
+      const [statsData, activityData, scansData] = await Promise.all([
         getDashboardStats(),
-        getScanActivity(chartPeriod),
-        getRecentScans()
+        getScanActivity(),
+        getRecentScans(),
       ]);
-      setStats(statsRes);
-      setChartData(chartRes);
-      setRecentScans(scansRes);
+
+      setStats(statsData || null);
+      setActivity(activityData || []);
+      setRecentScans(scansData || []);
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
-      setError('Unable to load dashboard data');
+      setError("Unable to load dashboard data");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
-  }, []); // Initial load
+  }, []);
 
-  const handlePeriodChange = async (period) => {
-    setChartPeriod(period);
-    try {
-      const newChartData = await getScanActivity(period);
-      setChartData(newChartData);
-    } catch (err) {
-      console.error('Failed to fetch chart data:', err);
-    }
-  };
+  const filteredScans = recentScans.filter((scan) =>
+    (scan.fileName || scan.name || "")
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="mb-8">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-32">
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-80"></div>
-          <div className="lg:col-span-1 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-80"></div>
+      <div className="p-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-72 rounded bg-slate-200" />
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="h-32 rounded-2xl bg-slate-200" />
+            ))}
+          </div>
+          <div className="h-80 rounded-2xl bg-slate-200" />
         </div>
       </div>
     );
@@ -91,15 +119,18 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh]">
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center max-w-md w-full text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">{error}</h2>
-          <p className="text-gray-500 mb-6">Please check your connection and try again.</p>
-          <button 
+      <div className="p-8">
+        <div className="rounded-2xl border border-red-100 bg-white p-10 text-center shadow-sm">
+          <h2 className="text-xl font-semibold text-red-600">{error}</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Backend API connect hone ke baad real dashboard data show hoga.
+          </p>
+
+          <button
             onClick={fetchDashboardData}
-            className="px-6 py-2 bg-brand-purple text-white rounded-lg hover:bg-brand-light transition-colors"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white hover:bg-purple-700"
           >
+            <RefreshCw className="h-4 w-4" />
             Try Again
           </button>
         </div>
@@ -107,50 +138,170 @@ const Dashboard = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome back, {userName}! 👋</h1>
-        <p className="text-gray-500">Here’s what’s happening with your scans today.</p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = iconMap[stat.iconType] || Search;
-          return (
-            <StatCard 
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              change={stat.change}
-              isPositive={stat.isPositive}
-              icon={Icon}
-              delay={index * 0.1}
-            />
-          );
-        })}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ScanActivityChart 
-            data={chartData} 
-            period={chartPeriod} 
-            onPeriodChange={handlePeriodChange} 
-          />
+  if (!stats) {
+    return (
+      <div className="p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-800">
+            No dashboard data available
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Backend se data aane ke baad dashboard update hoga.
+          </p>
         </div>
-        <div className="lg:col-span-1">
-          <RecentScans 
-            scans={recentScans} 
-            searchQuery={searchQuery} 
-          />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 lg:p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900">
+          Welcome back, {userName}! 👋
+        </h1>
+        <p className="mt-2 text-sm text-slate-500">
+          Here’s what’s happening with your scans today.
+        </p>
+      </div>
+
+      <div className="mb-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Total Scans"
+          value={stats.totalScans ?? 0}
+          change={stats.totalScansChange}
+          icon={Search}
+        />
+
+        <StatCard
+          title="Avg. Similarity"
+          value={`${stats.avgSimilarity ?? 0}%`}
+          change={stats.avgSimilarityChange}
+          icon={Percent}
+        />
+
+        <StatCard
+          title="Documents Uploaded"
+          value={stats.documentsUploaded ?? 0}
+          change={stats.documentsUploadedChange}
+          icon={FileText}
+        />
+
+        <StatCard
+          title="Accuracy"
+          value={`${stats.accuracy ?? 0}%`}
+          change={stats.accuracyChange}
+          icon={CheckCircle}
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Scan Activity
+              </h2>
+              <p className="text-sm text-slate-500">
+                Documents verified over time
+              </p>
+            </div>
+          </div>
+
+          {activity.length === 0 ? (
+            <div className="flex h-72 items-center justify-center text-sm text-slate-400">
+              No activity data available
+            </div>
+          ) : (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={activity}>
+                  <defs>
+                    <linearGradient id="scanColor" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="scans"
+                    stroke="#7c3aed"
+                    strokeWidth={3}
+                    fill="url(#scanColor)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                Recent Scans
+              </h2>
+              <p className="text-sm text-slate-500">
+                Your latest verified documents
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-xl border border-slate-200 px-3 py-2">
+            <input
+              type="text"
+              placeholder="Search recent scans..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </div>
+
+          {filteredScans.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-400">
+              No recent scans available
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredScans.map((scan, index) => (
+                <div
+                  key={scan._id || index}
+                  className="flex items-center justify-between rounded-xl p-3 transition hover:bg-slate-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-slate-100 p-3 text-slate-500">
+                      <FileCheck className="h-5 w-5" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {scan.fileName || scan.name || "Untitled document"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {scan.createdAt
+                          ? new Date(scan.createdAt).toDateString()
+                          : "Unknown date"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${getScoreClass(
+                      scan.similarityScore ?? 0
+                    )}`}
+                  >
+                    {scan.similarityScore ?? 0}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-};
-
-export default Dashboard;
+}
