@@ -1,18 +1,53 @@
 {
-  "trained_at": "2026-04-30T03:34:30.206852Z",
-  "dataset_size": 112,
-  "positive_pairs": 61,
-  "negative_pairs": 51,
-  "vocab_size": 2984,
+  "model_name": "TF-IDF Cosine Similarity \u2014 PROOFNEXA",
+  "trained_at": "2026-05-01T09:46:17.023219+00:00",
+  "training_time_sec": 6.8,
+  "vectorizer_path": "/home/claude/proofnexa/PROOFNEXA-main/nlp-engine/models/tfidf_vectorizer.pkl",
   "ngram_range": [
     1,
     3
   ],
-  "max_features": 50000,
-  "vectorizer_path": "/home/claude/proofnexa/PROOFNEXA-main/nlp-engine/models/tfidf_vectorizer.pkl",
-  "validation": {
-    "accuracy": 0.9107,
-    "avg_pos_sim": 0.2605,
-    "avg_neg_sim": 0.0
+  "max_features": 75000,
+  "vocabulary_size": 13473,
+  "sublinear_tf": true,
+  "similarity_threshold": 0.3,
+  "evaluation": {
+    "accuracy": 0.9936,
+    "threshold_used": 0.3,
+    "avg_sim_positive": 0.8151,
+    "avg_sim_negative": 0.0006,
+    "total_pairs": 10000,
+    "positive_pairs": 7500,
+    "negative_pairs": 2500
+  },
+  "dataset": {
+    "file": "plagiarism_10k_dataset.csv",
+    "total_pairs": 10000,
+    "positive_pairs": 7500,
+    "negative_pairs": 2500
+  },
+  "full_evaluation": {
+    "total_pairs": 10000,
+    "train_pairs": 8000,
+    "test_pairs": 2000,
+    "threshold": 0.1,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "confusion": [
+      [
+        500,
+        0
+      ],
+      [
+        0,
+        1500
+      ]
+    ],
+    "avg_sim_pos": 0.8162,
+    "avg_sim_neg": 0.0004,
+    "positive_pairs": 7500,
+    "negative_pairs": 2500
   }
 }
