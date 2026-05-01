@@ -14,12 +14,16 @@ from app.utils.logging import logger
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="Production-grade NLP Plagiarism Detection Engine",
-    version=settings.VERSION,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    title="ProofNexa NLP Engine",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
+
+@app.get("/")
+async def root():
+    return {"message": "ProofNexa NLP Engine is running", "docs": "/docs"}
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
